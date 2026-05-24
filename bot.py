@@ -8,7 +8,7 @@ from aiogram.filters import CommandStart, Command
 from aiogram.enums import ParseMode
 
 # ==================== SOZLAMALAR ====================
-BOT_TOKEN = "8884799336:AAGD9Sf48ZHtBhpxkyKzk-96LwOtwVb7E78"
+BOT_TOKEN = "8884799336:AAH81QGdgunakeh25AtuVvznLOa5yEdPpiA"
 DEEPSEEK_API_KEY = "sk-0e08f0c2b8b84e08bef07a61ee661f0b"
 
 # TO'G'RILANDI: Rasmiy API oxiriga /chat/completions qo'shildi
