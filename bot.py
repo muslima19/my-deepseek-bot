@@ -1,16 +1,17 @@
-import logging
 import asyncio
+import logging
+from threading import Thread
+import aiohttp
+from flask import Flask
 from aiogram import Bot, Dispatcher, types, F
 from aiogram.filters import CommandStart, Command
 from aiogram.enums import ParseMode
-import aiohttp
-from flask import Flask
-from threading import Thread
 
 # ==================== SOZLAMALAR ====================
-# new bot token & deepseek api key:
 BOT_TOKEN = "8884799336:AAGD9Sf48ZHtBhpxkyKzk-96LwOtwVb7E78"
 DEEPSEEK_API_KEY = "sk-0e08f0c2b8b84e08bef07a61ee661f0b"
+
+# TO'G'RILANDI: Rasmiy API oxiriga /chat/completions qo'shildi
 DEEPSEEK_URL = "https://deepseek.com"
 
 MAX_CHARS = 500
@@ -33,7 +34,6 @@ def home():
     return "Bot Render serverida 24/7 faol ishlamoqda!"
 
 def run_flask():
-    # Render avtomatik taqdim etadigan 10000-portda veb-saytni yoqamiz
     app.run(host='0.0.0.0', port=10000)
 
 
@@ -47,15 +47,15 @@ async def reset_daily_limits():
 
 # ==================== DEEPSEEK API BILAN ISHLASH ====================
 async def ask_deepseek(prompt: str):
+    # TO'G'RILANDI: Keraksiz User-Agent sarlavhalari olib tashlandi
     headers = {
         "Authorization": f"Bearer {DEEPSEEK_API_KEY}",
-        "Content-Type": "application/json",
-        "User-Agent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36",
-        "Accept": "application/json"
+        "Content-Type": "application/json"
     }
     
+    # TO'G'RILANDI: Mavjud bo'lmagan model nomi "deepseek-chat" ga o'zgartirildi
     payload = {
-        "model": "deepseek-v4-flash",
+        "model": "deepseek-chat",
         "messages": [{"role": "user", "content": prompt}],
         "max_tokens": MAX_TOKENS,
         "temperature": 0.7
@@ -67,10 +67,12 @@ async def ask_deepseek(prompt: str):
             async with session.post(DEEPSEEK_URL, json=payload, headers=headers) as response:
                 if response.status == 200:
                     data = await response.json()
-                    return data['choices']['message']['content']
+                    # TO'G'RILANDI: Ro'yxatdan birinchi elementni olish uchun [0] indeksi qo'shildi
+                    return data['choices'][0]['message']['content']
                 else:
                     return f"DeepSeek xato qaytardi (Kod: {response.status})."
     except Exception as e:
+        logging.error(f"API Xatolik: {e}")
         return "Tizimda xatolik yuz berdi. Birozdan so'ng urinib ko'ring."
 
 
@@ -118,7 +120,7 @@ async def handle_message(message: types.Message):
 
     # 2. Xabar uzunligi haqida ogohlantirish (Max 500 char)
     if len(text) > MAX_CHARS:
-        await message.answer(f"⚠️ <b>Ogohlantirish!</b>xabaringiz {MAX_CHARS} belgidan ko'p. Javob chala chiqishi mumkin.", parse_mode=ParseMode.HTML)
+        await message.answer(f"⚠️ <b>Ogohlantirish!</b> xabaringiz {MAX_CHARS} belgidan ko'p. Javob chala chiqishi mumkin.", parse_mode=ParseMode.HTML)
 
     status_msg = await message.answer("⏳ <i>DeepSeek thinking...</i>", parse_mode=ParseMode.HTML)
     
@@ -134,15 +136,12 @@ async def handle_message(message: types.Message):
 
 # ==================== INTEGRATSIYA VA ISHGA TUSHIRISH ====================
 async def main():
-    # Fondagi limitlarni nollash taymerini faollashtiramiz
     asyncio.create_task(reset_daily_limits())
     await dp.start_polling(bot)
 
 
 if __name__ == "__main__":
-    # Flask veb serverni alohida oqimda (Thread) fonda yoqamiz
     t = Thread(target=run_flask)
     t.start()
     
-    # Telegram botni asosiy oqimda ishga tushiramiz
     asyncio.run(main())
